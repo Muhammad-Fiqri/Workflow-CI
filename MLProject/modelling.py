@@ -28,7 +28,9 @@ print(f"y_train head:\n{y_train.head()}")
 print(f"y_test shape:  {y_test.shape}")
 print(f"y_test head:\n{y_test.head()}")
 
-with mlflow.start_run(run_name="Linear_Regression_Base"):
+with mlflow.start_run(run_name="Linear_Regression_Base", nested=True):
+    mlflow.log_param("model_type", "LinearRegression")
+    
     # 3. Initialize and train the Linear Regression model
     model = LinearRegression()
     model.fit(X_train, y_train)
