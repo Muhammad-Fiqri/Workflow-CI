@@ -6,7 +6,7 @@ import numpy as np
 import mlflow
 import mlflow.sklearn
 
-mlflow.set_tracking_uri("http://127.0.0.1:5000") # Default local URI
+# mlflow.set_tracking_uri("http://127.0.0.1:5000") # Default local URI, Comment went running on Github Actions
 mlflow.set_experiment("House_Price_Regression")
 
 dataset_path = 'kc_house_data_preprocessing/'
