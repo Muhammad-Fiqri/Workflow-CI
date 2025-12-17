@@ -37,8 +37,6 @@ jobs:
           pip install mlflow
       
       - name: Run mlflow project
-        env:
-          MLFLOW_TRACKING_URI: sqlite:///mlflow.db
         run: |
           mlflow run MLProject --env-manager=local
       
@@ -50,7 +48,7 @@ jobs:
       
       - name: Build Docker Model
         run: |
-          mlflow models build-docker --model-uri "runs:/$RUN_ID/model" --name "asah-proyek_Akhir"
+          mlflow models build-docker --model-uri "runs:/$RUN_ID/model" --name "asah-proyek_akhir"
       
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -60,8 +58,8 @@ jobs:
       
       - name: Tag Docker Image
         run: |
-          docker tag cc ${{ secrets.DOCKER_HUB_USERNAME }}/cc:latest
+          docker tag asah-proyek_akhir ${{ secrets.DOCKER_HUB_USERNAME }}/asah-proyek_akhir:latest
       
       - name: Push Docker Image
         run: |
-          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/cc:latest
+          docker push ${{ secrets.DOCKER_HUB_USERNAME }}/asah-proyek_akhir:latest
