@@ -32,7 +32,7 @@ jobs:
       - name: Run MLflow Training
         run: |
           # Use '.' to point to the directory containing MLproject
-          mlflow run . --env-manager=local
+          mlflow run MLProject --env-manager=local
 
       - name: Get latest MLflow run_id
         run: |
