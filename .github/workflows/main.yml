@@ -3,15 +3,11 @@ name: CI/CD MLflow
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 env:
-  X_TEST: "kc_house_data_preprocessing/X_test_preprocessed.csv"
-  X_TRAIN: "kc_house_data_preprocessing/X_train_preprocessed.csv"
-  Y_TEST: "kc_house_data_preprocessing/test_preprocessed_with_target.csv"
-  Y_TRAIN: "kc_house_data_preprocessing/train_preprocessed_with_target.csv"
-  TARGET_VAR: "price"
+  # This is the magic fix: Use an absolute path for the tracking database
+  MLFLOW_TRACKING_URI: "file://${{ github.workspace }}/mlruns"
+  EXPERIMENT_NAME: "House_Price_Regression"
 
 jobs:
   build-and-push:
@@ -31,19 +27,21 @@ jobs:
 
       - name: Run MLflow Training
         run: |
-          # Use '.' to point to the directory containing MLproject
-          mlflow run MLProject --env-manager=local
+          # Create the experiment first to avoid race conditions
+          mlflow experiments create --experiment-name ${{ env.EXPERIMENT_NAME }} || true
+          # Run the project, passing the experiment name via CLI
+          mlflow run . --experiment-name ${{ env.EXPERIMENT_NAME }} --env-manager=local
 
       - name: Get latest MLflow run_id
         run: |
-          # Robust extraction using Python to find the last run in the experiment
-          RUN_ID=$(python -c "import mlflow; client = mlflow.tracking.MlflowClient(); runs = client.search_runs(experiment_ids=client.get_experiment_by_name('House_Price_Regression').experiment_id, order_by=['attribute.start_time DESC'], max_results=1); print(runs[0].info.run_id)")
+          # Use Python to get the ID from the specific experiment we just ran
+          RUN_ID=$(python -c "import mlflow; client = mlflow.tracking.MlflowClient(); experiment = client.get_experiment_by_name('${{ env.EXPERIMENT_NAME }}'); runs = client.search_runs(experiment_ids=[experiment.experiment_id], order_by=['attribute.start_time DESC'], max_results=1); print(runs[0].info.run_id)")
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
           echo "Captured Run ID: $RUN_ID"
 
       - name: Build Docker Model
         run: |
-          # Build image from the logged model artifact
+          # Now it will find the model artifact in the absolute tracking path
           mlflow models build-docker --model-uri "runs:/$RUN_ID/model" --name "asah-proyek_akhir"
 
       - name: Log in to Docker Hub
@@ -54,6 +52,5 @@ jobs:
 
       - name: Push Docker Image
         run: |
-          # Tag and push to your repository
           docker tag asah-proyek_akhir ${{ secrets.DOCKER_HUB_USERNAME }}/asah-proyek_akhir:latest
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/asah-proyek_akhir:latest
