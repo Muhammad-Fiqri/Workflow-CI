@@ -2,11 +2,9 @@ name: CI/CD MLflow
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
 
 env:
   X_TEST: "kc_house_data_preprocessing/X_test_preprocessed.csv"
@@ -16,55 +14,46 @@ env:
   TARGET_VAR: "price"
 
 jobs:
-  builds:
+  build-and-push:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python 3.12.7
         uses: actions/setup-python@v4
         with:
           python-version: "3.12.7"
-      
-      - name: Check Env Variable
-        run: |
-          echo $X_TEST
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install mlflow
+          pip install mlflow pandas scikit-learn numpy
 
-      - name: Start MLflow server
+      - name: Run MLflow Training
         run: |
-          mlflow ui
-          sleep 5 # Give it a few seconds to boot up
-      
-      - name: Run mlflow project
-        run: |
-          mlflow run MLProject --env-manager=local
-      
+          # Use '.' to point to the directory containing MLproject
+          mlflow run . --env-manager=local
+
       - name: Get latest MLflow run_id
         run: |
-          RUN_ID=$(ls -td mlruns/0/*/ | head -n 1 | cut -d'/' -f3)
+          # Robust extraction using Python to find the last run in the experiment
+          RUN_ID=$(python -c "import mlflow; client = mlflow.tracking.MlflowClient(); runs = client.search_runs(experiment_ids=client.get_experiment_by_name('House_Price_Regression').experiment_id, order_by=['attribute.start_time DESC'], max_results=1); print(runs[0].info.run_id)")
           echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
-          echo "Latest run_id: $RUN_ID"
-      
+          echo "Captured Run ID: $RUN_ID"
+
       - name: Build Docker Model
         run: |
+          # Build image from the logged model artifact
           mlflow models build-docker --model-uri "runs:/$RUN_ID/model" --name "asah-proyek_akhir"
-      
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
-      
-      - name: Tag Docker Image
-        run: |
-          docker tag asah-proyek_akhir ${{ secrets.DOCKER_HUB_USERNAME }}/asah-proyek_akhir:latest
-      
+
       - name: Push Docker Image
         run: |
+          # Tag and push to your repository
+          docker tag asah-proyek_akhir ${{ secrets.DOCKER_HUB_USERNAME }}/asah-proyek_akhir:latest
           docker push ${{ secrets.DOCKER_HUB_USERNAME }}/asah-proyek_akhir:latest
