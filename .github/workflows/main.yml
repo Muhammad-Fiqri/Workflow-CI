@@ -30,7 +30,7 @@ jobs:
           # Create the experiment first to avoid race conditions
           mlflow experiments create --experiment-name ${{ env.EXPERIMENT_NAME }} || true
           # Run the project, passing the experiment name via CLI
-          mlflow run . --experiment-name ${{ env.EXPERIMENT_NAME }} --env-manager=local
+          mlflow run MLProject --experiment-name ${{ env.EXPERIMENT_NAME }} --env-manager=local
 
       - name: Get latest MLflow run_id
         run: |
