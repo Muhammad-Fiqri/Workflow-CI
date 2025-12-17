@@ -37,6 +37,8 @@ jobs:
           pip install mlflow
       
       - name: Run mlflow project
+        env:
+          MLFLOW_TRACKING_URI: ./mlruns
         run: |
           mlflow run MLProject --env-manager=local
       
